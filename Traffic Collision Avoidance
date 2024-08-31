@@ -61,14 +61,13 @@ def worker_shambayati(id, secret, q_request, q_reply):
 
     # eigenen Puck rausfinden
     q_request.put(('GET_SIZE', id))
-    size = q_reply.get[1]
+    size = q_reply.get()[1]
     for n in range(0, size-1):
-        q_request.put('GET_PUCK', n, id)
-        if q_reply.get[2] == id:
-            n_self = q_request.put[1]
-
-    #q_request.put(('GET_Puck', n, id))
-    #q_request.get(('GET_Puck', puck))
+        q_request.put(('GET_PUCK', n, id))
+        puck = q_reply.get()[1]
+        if puck.get_id() == id:
+            puck_self = n
+            break
 
     # Grenzen abfragen
     q_request.put((’GET BOX’,  id))
