@@ -59,9 +59,13 @@ def worker_shambayati(id, secret, q_request, q_reply):
 
     q_request.put(('SET_NAME', 'shambayati', secret, id))
 
-    q_request(('GET_Puck', n, id))
-    if q_reply.get[1] == None:
-        return False #Puck existiert nicht
+    # eigenen Puck rausfinden
+    q_request.put(('GET_SIZE', id))
+    size = q_reply.get[1]
+    for n in range(0, size-1):
+        q_request.put('GET_PUCK', n, id)
+        if q_reply.get[2] == id:
+            n_self = q_request.put[1]
 
     #q_request.put(('GET_Puck', n, id))
     #q_request.get(('GET_Puck', puck))
@@ -78,7 +82,7 @@ def worker_shambayati(id, secret, q_request, q_reply):
 
     # Verhalten nach einer Reflexion
     s = puck.get_position()
-    if s[0] == xmin or s[0] == xmax or s[1] == ymin or s[1] == ymax:
+    if s[0]-Puck_Server.RADIUS == xmin or s[0]+Puck_Server.RADIUS == xmax or s[1]-Puck_Server.RADIUS == ymin or s[1]+Puck_Server.RADIUS == ymax:
         #mehrere Abfragen
 
     # Geschwindigkeit abfragen
@@ -103,8 +107,8 @@ def worker_shambayati(id, secret, q_request, q_reply):
     t = Zeit
 
     # verhalten bei möglicher Kollision
-    del_v = 
-    del_r = 
+    del_v = v_1,o-v_2,0
+    del_r = r_1,0-r_2,0
     t_ca = - del_r*del_v/ del_v*del_v
     r_ca = del_r-(del_r*del_v)/del_v*del_v)*del_v
     a = 2*(2.5-r_ca) / t_ca**2
