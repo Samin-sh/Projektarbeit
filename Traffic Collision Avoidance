@@ -82,7 +82,7 @@ def worker_shambayati(id, secret, q_request, q_reply):
 
     # Verhalten nach einer Reflexion
     s = puck.get_position()
-    if s[0]-Puck_Server.RADIUS == xmin or s[0]+Puck_Server.RADIUS == xmax or s[1]-Puck_Server.RADIUS == ymin or s[1]+Puck_Server.RADIUS == ymax:
+    if s[0]-Puck.RADIUS == xmin or s[0]+Puck.RADIUS == xmax or s[1]-Puck.RADIUS == ymin or s[1]+Puck.RADIUS == ymax:
         #mehrere Abfragen
 
     # Geschwindigkeit abfragen
