@@ -61,17 +61,19 @@ def worker_shambayati(id, secret, q_request, q_reply):
 
     # eigenen Puck rausfinden
     q_request.put(('GET_SIZE', id))
+    # Gesamtanzahl der Pucks
     size = q_reply.get()[1]
     for n in range(0, size-1):
         q_request.put(('GET_PUCK', n, id))
         puck = q_reply.get()[1]
         if puck.get_id() == id:
-            puck_self = n
+            puck_self = puck
             break
 
     # Grenzen abfragen
     q_request.put((’GET BOX’,  id))
-    grenzen = q_reply.get(’GET BOX’, box)
+    grenzen = q_reply.get()[1]
+    box = Box(grenzen[0], grenzen[1], grenzen[2], grenzen[3])
     x_koordinaten = box.get_x_limits()
     xmin = x_koordinaten[0]
     xmax = x_koordinaten[1]
@@ -85,11 +87,12 @@ def worker_shambayati(id, secret, q_request, q_reply):
         #mehrere Abfragen
 
     # Geschwindigkeit abfragen
-    v_vektor = puck.get_velocity()
+    v_vektor = puck_self.get_velocity()
     v = betrag(v_vektor)
 
     import numpy as np
     # Geschwindigkeitsgrenzen nicht überschreiten
+    # (entweder nach jeder Beschleunigung oder in kleinen Zeitabschnitten)
     if v == V_MIN + 1:
         q_request.put(’SET_ACCELERATION’, np.array ([1, 1]), secret, id)
         q_reply.get(’SET_ACCELERATION’, a)
