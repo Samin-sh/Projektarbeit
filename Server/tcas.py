@@ -11,7 +11,7 @@ import params
 import secret
 import box_server
 import puck_server
-#import worker
+from Traffic_Collision_Avoidance import worker_shambayati
 
 SCALE = 10
 
@@ -44,8 +44,8 @@ def main():
 # In diese Liste können Sie zum Testen mehrere Instanzen Ihres
 # Workers einfügen. Jeder Worker kontrolliert einen Puck, es werden
 # soviele Pucks erzeugt, wie es Worker gibt.
-    workers = [ worker.worker_nachname, worker.worker_nachname,
-                worker.worker_nachname, worker.worker_nachname]
+    workers = [ worker_shambayati, worker_shambayati,
+                worker_shambayati, worker_shambayati]
     n_workers = len(workers)
     queues = [ manager.Queue() for i in range(n_workers)]
     secrets = secret.Secret(n_workers)
