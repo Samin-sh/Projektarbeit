@@ -45,7 +45,7 @@ def main():
 # Workers einfügen. Jeder Worker kontrolliert einen Puck, es werden
 # soviele Pucks erzeugt, wie es Worker gibt.
     workers = [ worker_shambayati, worker_shambayati,
-                worker_shambayati, worker_shambayati, worker_shambayati, worker_shambayati, worker_shambayati, worker_shambayati, worker_shambayati, worker_shambayati]
+                worker_shambayati, worker_shambayati, worker_shambayati, worker_shambayati, worker_shambayati, worker_shambayati, worker_shambayati, worker_shambayati, worker_shambayati, worker_shambayati]
     n_workers = len(workers)
     queues = [ manager.Queue() for i in range(n_workers)]
     secrets = secret.Secret(n_workers)

@@ -65,6 +65,7 @@ def worker_shambayati(id, secret, q_request, q_reply):
     V_MAX = 42.0
     A_MAX = 100.0
 
+    # namen setzen
     q_request.put(('SET_NAME', 'shambayati', secret, id))
     name = q_reply.get()
 
@@ -101,12 +102,12 @@ def worker_shambayati(id, secret, q_request, q_reply):
             q_request.put(('GET_PUCK', i, id))
             puck_i = q_reply.get()[1]
             if puck_i != None:
-                r_1 = puck_i.get_position()
-                v_1 = puck_i.get_velocity() # andere variante, um gesschwindigkeit zu bekommen?
-                del_v = delta(v_0, v_1)  # geschwindigkeitsdifferenz zweier Pucks
-                del_r = delta(r_0, r_1)  # Abstand
+                r_i = puck_i.get_position()
+                v_i = puck_i.get_velocity() # andere variante, um gesschwindigkeit zu bekommen?
+                del_v = delta(v_0, v_i)  # geschwindigkeitsdifferenz zweier Pucks
+                del_r = delta(r_0, r_i)  # Abstand
                 t_i = t_ca(del_r, del_v)
-                zeiten.append((t_i, puck_i))
+                zeiten.append((t_i, r_i, puck_i))
 
         zeiten_positiv = []
         zeiten_negativ = []
@@ -123,7 +124,11 @@ def worker_shambayati(id, secret, q_request, q_reply):
         zeiten_sortiert = zeiten_positiv + zeiten_negativ
 
         # benötigte beschleunigung berechnen und setzten
-
+        for i in range(len(zeiten_sortiert)):
+            r_ca = r_ca(del_r, del_v)
+            a = acceleration(r_ca, t_ca)
+            q_request.put(('SET_ACCELERATION', a, secret, id))
+            q_reply.get()
 
         # Geschwindigkeit abfragen
         v_vektor = puck_self.get_velocity()
@@ -168,6 +173,7 @@ def worker_shambayati(id, secret, q_request, q_reply):
 
     # Verhalten nach einer Reflexion
     #die negativen Zeiten betrachten
+    #negative geschwindigkeit betrachten wenn man kurz vor einer Grenze ist
     #s = puck_self.get_position()
     #if s[0] - puck_self.Puck.RADIUS <= xmin or s[0] + puck_self.Puck.RADIUS >= xmax or s[1] - puck_self.Puck.RADIUS <= ymin or s[
         #1] + puck_self.Puck.RADIUS >= ymax:
