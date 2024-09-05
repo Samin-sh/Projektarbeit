@@ -18,4 +18,4 @@ class TestDelta(unittest.TestCase):
         self.assertRaises(TypeError, delta, True, )
         self.assertRaises(TypeError, delta, "35")
 
-        
+    # Vektoren/ arrays mit verschiedenen dimensionen

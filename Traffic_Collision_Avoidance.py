@@ -1,3 +1,6 @@
+from params import A_MAX
+from params import V_MIN
+from params import V_MAX
 import box
 import puck
 from Server import box_server
@@ -6,25 +9,34 @@ import numpy as np
 from Server.box_server import Box_Server
 import numpy.linalg as la
 
-# berechnet den Betrag eines zweidimensionalen Vektors
-#def betrag(x, y):
-    #return m.sqrt(x ** 2 + y ** 2)
 
 # berechnet die Differenz zweier Vektoren
 def delta(t1, t2):
-    return t1 - t2
+    return np.array(t1) - np.array(t2)
 
 # time for closest approach
 def t_ca(del_r, del_v):
+    del_v = np.array(del_v)
+    del_r  = np.array(del_r)
+
+    nenner = np.dot(del_v, del_v)
+    if nenner == 0:
+        return 1e9
     return -np.dot(del_r, del_v)/ np.dot(del_v, del_v)      #negative Zeiten können vernachlässigt werden
 
 # Sicherheitsabstand
 def r_ca(del_r, del_v):
+    del_v = np.array(del_v)
+    del_r  = np.array(del_r)
+
+    nenner = np.dot(del_v, del_v)
+    if nenner == 0:
+        return 1e9
     return del_r - np.dot(del_r, del_v)/ np.dot(del_v, del_v)
 
 # notwendige Beschleunigung, um auszuweichen
 def acceleration(r_ca, t_ca):
-    return 2 * (2.5 - r_ca) / t_ca ** 2
+    return 2 * (2.5 - np.array(r_ca)) / t_ca ** 2
 
 #sortiert eine unsortierte Liste aus Tupeln rekursiv anhand des 0ten Elements eines Tupels
 def merge_sort(l):
@@ -61,25 +73,25 @@ def merge_sort(l):
 
 def worker_shambayati(id, secret, q_request, q_reply):
     global puck_self
-    V_MIN = 10.0
-    V_MAX = 42.0
-    A_MAX = 100.0
 
     # namen setzen
     q_request.put(('SET_NAME', 'shambayati', secret, id))
     name = q_reply.get()
 
-    # eigenen Puck rausfinden
+    # eigenen Puck herausfinden
+    puck_self = None
     q_request.put(('GET_SIZE', id))
     # Gesamtanzahl der Pucks
     size = q_reply.get()[1]
     for n in range(0, size - 1):
         q_request.put(('GET_PUCK', n, id))
         puck = q_reply.get()[1]
-        if puck.get_id() == id:
+
+        if puck and puck.get_id() == id:
             puck_self = puck
-            n_self = n
             break
+    if puck_self is None:
+        return
 
     # Grenzen abfragen
     q_request.put(('GET_BOX', id))
@@ -93,6 +105,8 @@ def worker_shambayati(id, secret, q_request, q_reply):
 
     # auf mögliche Kollisionsgefahr prüfen
     while True:
+        q_request.put(('SET_ACCELERATION', np.array([0, 0]), secret, id))
+        q_reply.get()
         zeiten = []
         # eigene Position
         r_0 = puck_self.get_position()
@@ -101,14 +115,14 @@ def worker_shambayati(id, secret, q_request, q_reply):
         for i in range (0, size-1):
             q_request.put(('GET_PUCK', i, id))
             puck_i = q_reply.get()[1]
-            if puck_i != None:
+            if puck_i is not None:
                 r_i = puck_i.get_position()
-                v_i = puck_i.get_velocity() # andere variante, um gesschwindigkeit zu bekommen?
+                v_i = puck_i.get_velocity() # andere variante, um geschwindigkeit zu bekommen?
                 del_v = delta(v_0, v_i)  # geschwindigkeitsdifferenz zweier Pucks
                 del_r = delta(r_0, r_i)  # Abstand
                 t_i = t_ca(del_r, del_v)
                 zeiten.append((t_i, r_i, puck_i))
-
+        # Liste in negative und positive zeiten aufteilen
         zeiten_positiv = []
         zeiten_negativ = []
         for tupel in zeiten:
@@ -121,66 +135,68 @@ def worker_shambayati(id, secret, q_request, q_reply):
         merge_sort(zeiten_positiv)
         merge_sort(zeiten_negativ)
 
-        zeiten_sortiert = zeiten_positiv + zeiten_negativ
-
         # benötigte beschleunigung berechnen und setzten
-        for i in range(len(zeiten_sortiert)):
-            r_ca = r_ca(del_r, del_v)
-            a = acceleration(r_ca, t_ca)
-            q_request.put(('SET_ACCELERATION', a, secret, id))
-            q_reply.get()
+        for i in range(len(zeiten_positiv)):
+            puck_i = zeiten_positiv[i][2]
+            del_r = delta(puck_self.get_position(), puck_i.get_position())
+            del_v = delta(puck_self.get_velocity(), puck_i.get_velocity())
 
-        # Geschwindigkeit abfragen
-        v_vektor = puck_self.get_velocity()
-        vx = v_vektor[0]
-        vy = v_vektor[1]
-        v = la.norm([vx, vy])
+            if t_i > 0:
+                r = r_ca(del_r, del_v)
+                if np.linalg.norm(r) > 0:
+                    a = acceleration(np.linalg.norm(r), t_i)
+                    q_request.put(('SET_ACCELERATION', a, secret, id))
+                    q_reply.get()
 
-        # Richtung der Beschleunigung durch v als normierten Einheitsvektor rausfinden
-        v_norm = v_vektor / v
-        a_betrag = v_norm * 5
+                    # Geschwindigkeit abfragen
+                    v_vektor = puck_self.get_velocity()
+                    vx = v_vektor[0]
+                    vy = v_vektor[1]
+                    v = la.norm([vx, vy])
 
-        # V_MIN nicht unterschreiten
-        # (entweder nach jeder Beschleunigung oder in kleinen Zeitabschnitten)
-        if v == V_MIN + 1:
-            q_request.put(('SET_ACCELERATION', a_betrag, secret, id))
-            q_reply.get()
-            q_request.put(('SET_ACCELERATION', np.array([0, 0]), secret, id))
-            q_reply.get()
+                    # Richtung der Beschleunigung durch v als normierten Einheitsvektor rausfinden
+                    v_norm = v_vektor / v
+                    a_betrag = v_norm * 6
 
-        # V_MAX nicht überschreiten
-        if v == V_MAX - 1:
-            q_request.put('SET_ACCELERATION', -a_betrag, secret, id)
-            q_reply.get()
-            q_request.put('SET_ACCELERATION', np.array([0, 0]), secret, id)
-            q_reply.get()
+                    # V_MIN nicht unterschreiten
+                    # (entweder nach jeder Beschleunigung oder in kleinen Zeitabschnitten)
+                    if v == V_MIN + 6:
+                        q_request.put(('SET_ACCELERATION', a_betrag, secret, id))
+                        q_reply.get()
+                        q_request.put(('SET_ACCELERATION', np.array([0, 0]), secret, id))
+                        q_reply.get()
 
-        # nach dem Ausscheiden aus dem Spiel aufhören
-        if puck_self.is_alive() == False:
-            break
+                    # V_MAX nicht überschreiten
+                    if v == V_MAX - 6:
+                        q_request.put(('SET_ACCELERATION', -a_betrag, secret, id))
+                        q_reply.get()
+                        q_request.put(('SET_ACCELERATION', np.array([0, 0]), secret, id))
+                        q_reply.get()
 
-            # überprüfen ob Schnittpunkt existiert -> boolean
+                    # maximalbeschleunigung nicht überschreiten
+                    a = puck_self.get_acceleration()
+                    if la.norm(a) > A_MAX:
+                        raise ValueError('exceding max acceleration')
+                        a = a * (A_MAX / la.norm(a))  # A_MAX skalieren
+                        q_request.put(('SET_ACCELERATION', a, secret, id))
+                        q_reply.get()
+                        q_request.put(('SET_ACCELERATION', np.array[0, 0], secret, id))
+                        q_reply.get()
 
-    # maximalbeschleunigung nicht überschreiten
-    a = puck_self.get_acceleration()
-    if la.norm(a) > A_MAX:
-        raise ValueError('exceding max acceleration')
-        a = a * (A_MAX / la.norm(a))        #A_MAX skalieren
-        q_request.put('SET_ACCELERATION', a, secret, id)
-        q_reply.get()
-        q_request.put(('GET_ACCELERATION', np.array[0, 0] , secret, id))
-        q_reply.get()
-
-    # Verhalten nach einer Reflexion
-    #die negativen Zeiten betrachten
-    #negative geschwindigkeit betrachten wenn man kurz vor einer Grenze ist
-    #s = puck_self.get_position()
-    #if s[0] - puck_self.Puck.RADIUS <= xmin or s[0] + puck_self.Puck.RADIUS >= xmax or s[1] - puck_self.Puck.RADIUS <= ymin or s[
-        #1] + puck_self.Puck.RADIUS >= ymax:
-    # mehrere Abfragen
-
-
+            # nach dem Ausscheiden aus dem Spiel aufhören
+            if puck_self.is_alive() == False:
+                break
 '''
+# Verhalten nach einer Reflexion
+#die negativen Zeiten betrachten
+#negative geschwindigkeit betrachten wenn man kurz vor einer Grenze ist
+#s = puck_self.get_position()
+#if s[0] - puck_self.Puck.RADIUS <= xmin or s[0] + puck_self.Puck.RADIUS >= xmax or s[1] - puck_self.Puck.RADIUS <= ymin or s[
+    #1] + puck_self.Puck.RADIUS >= ymax:
+
+
+
+
 def main():
     # die request queue erzeugen
     # manager = mp.Manager()
