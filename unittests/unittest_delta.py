@@ -15,7 +15,7 @@ class TestDelta(unittest.TestCase):
         self.assertEqual(delta(9.3,2.5), 6.8)
 
     def test_type(self):
-        self.assertRaises(TypeError, delta, True)
+        self.assertRaises(TypeError, delta, True, )
         self.assertRaises(TypeError, delta, "35")
 
         

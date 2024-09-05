@@ -23,9 +23,41 @@ def r_ca(del_r, del_v):
     return del_r - np.dot(del_r, del_v)/ np.dot(del_v, del_v)
 
 # notwendige Beschleunigung, um auszuweichen
-def beschleunigung(r_ca, t_ca):
+def acceleration(r_ca, t_ca):
     return 2 * (2.5 - r_ca) / t_ca ** 2
 
+#sortiert eine unsortierte Liste aus Tupeln rekursiv anhand des 0ten Elements eines Tupels
+def merge_sort(l):
+    if len(l) > 1:
+        half = len(l) // 2
+        left_l = l[:half]
+        right_l = l[half:]
+
+        merge_sort(left_l)
+        merge_sort(right_l)
+
+        i = 0
+        j = 0
+        k = 0
+
+        while i < len(left_l) and j < len(right_l):
+            if left_l[i][0] < right_l[j][0]:
+                l[k] = left_l[i]
+                i += 1
+            else:
+                l[k] = right_l[j]
+                j += 1
+            k += 1
+
+        while i < len(left_l):
+                l[k] = left_l[i]
+                k += 1
+                i += 1
+
+        while j < len(right_l):
+                l[k] = right_l[j]
+                k += 1
+                j += 1
 
 def worker_shambayati(id, secret, q_request, q_reply):
     global puck_self
@@ -51,11 +83,10 @@ def worker_shambayati(id, secret, q_request, q_reply):
     # Grenzen abfragen
     q_request.put(('GET_BOX', id))
     grenzen = q_reply.get()[1]
-    box = Box_Server(grenzen[0], grenzen[1], grenzen[2], grenzen[3])
-    x_koordinaten = box.get_x_limits()
+    x_koordinaten = grenzen.get_x_limits()
     xmin = x_koordinaten[0]
     xmax = x_koordinaten[1]
-    y_koordinaten = box.get_y_limits()
+    y_koordinaten = grenzen.get_y_limits()
     ymin = y_koordinaten[0]
     ymax = y_koordinaten[1]
 
@@ -68,14 +99,31 @@ def worker_shambayati(id, secret, q_request, q_reply):
         v_0 = puck_self.get_velocity()
         for i in range (0, size-1):
             q_request.put(('GET_PUCK', i, id))
-            if q_reply.get()[1] != None:
-                puck_i =  q_reply.get()[1]
+            puck_i = q_reply.get()[1]
+            if puck_i != None:
                 r_1 = puck_i.get_position()
-                v_1 = puck_i.get_velocity()
+                v_1 = puck_i.get_velocity() # andere variante, um gesschwindigkeit zu bekommen?
                 del_v = delta(v_0, v_1)  # geschwindigkeitsdifferenz zweier Pucks
                 del_r = delta(r_0, r_1)  # Abstand
                 t_i = t_ca(del_r, del_v)
                 zeiten.append((t_i, puck_i))
+
+        zeiten_positiv = []
+        zeiten_negativ = []
+        for tupel in zeiten:
+            if tupel[0] >= 0:
+                zeiten_positiv.append(tupel)
+            else:
+                zeiten_negativ.append(tupel)
+
+        # liste aufsteigend sortieren
+        merge_sort(zeiten_positiv)
+        merge_sort(zeiten_negativ)
+
+        zeiten_sortiert = zeiten_positiv + zeiten_negativ
+
+        # benötigte beschleunigung berechnen und setzten
+
 
         # Geschwindigkeit abfragen
         v_vektor = puck_self.get_velocity()
@@ -102,7 +150,7 @@ def worker_shambayati(id, secret, q_request, q_reply):
             q_request.put('SET_ACCELERATION', np.array([0, 0]), secret, id)
             q_reply.get()
 
-        # nach dem ausscheiden aus dem Spiel aufhören
+        # nach dem Ausscheiden aus dem Spiel aufhören
         if puck_self.is_alive() == False:
             break
 
