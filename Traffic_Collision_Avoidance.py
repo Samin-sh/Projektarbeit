@@ -231,20 +231,4 @@ def worker_shambayati(id, secret, q_request, q_reply):
 #s = puck_self.get_position()
 #if s[0] - puck_self.Puck.RADIUS <= xmin or s[0] + puck_self.Puck.RADIUS >= xmax or s[1] - puck_self.Puck.RADIUS <= ymin or s[
     #1] + puck_self.Puck.RADIUS >= ymax:
-
-
-
-
-def main():
-    # die request queue erzeugen
-    # manager = mp.Manager()
-    # q_request = manager.Queue()
-
-    # Queues erzeugen
-    # q_reply = Queue()
-    # q_request = Queue()
-
-
-if __name__ == "__main__":
-    main()
 '''
