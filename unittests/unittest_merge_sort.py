@@ -1,37 +1,6 @@
 import unittest
 from Traffic_Collision_Avoidance import merge_sort
 
-def merge_sort(l):
-    if len(l) > 1:
-        half = len(l) // 2
-        left_l = l[:half]
-        right_l = l[half:]
-
-        merge_sort(left_l)
-        merge_sort(right_l)
-
-        i = 0
-        j = 0
-        k = 0
-
-        while i < len(left_l) and j < len(right_l):
-            if left_l[i][0] < right_l[j][0]:
-                l[k] = left_l[i]
-                i += 1
-            else:
-                l[k] = right_l[j]
-                j += 1
-            k += 1
-
-        while i < len(left_l):
-                l[k] = left_l[i]
-                k += 1
-                i += 1
-
-        while j < len(right_l):
-                l[k] = right_l[j]
-                k += 1
-                j += 1
 class TestMergeSort(unittest.TestCase):
 
     # testet Listen mit nur positive Zahlen
