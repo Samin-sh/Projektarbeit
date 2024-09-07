@@ -4,18 +4,36 @@ from params import V_MAX
 import box
 import puck
 from Server import box_server
+from Server.box_server import Box_Server
 import math as m
 import numpy as np
-from Server.box_server import Box_Server
 import numpy.linalg as la
 
 
 # berechnet die Differenz zweier Vektoren
 def delta(t1, t2):
+
+    # falls die Längen sich unterscheiden
+    if len(t1) != len(t2):
+        raise ValueError
+
+    # falls falsche Datentypen als Eingabe verwendet werden
+    if not (type(t1) in [list, np.ndarray] or type(t2) in [list, np.ndarray]):
+        raise TypeError
+
     return np.array(t1) - np.array(t2)
 
 # time for closest approach
 def t_ca(del_r, del_v):
+
+    # falls falsche Datentypen als Eingabe verwendet werden
+    if not (type(del_r) in [list, np.ndarray] or type(del_v) in [list, np.ndarray]):
+        raise TypeError
+
+    # falls die Längen sich unterscheiden
+    if len(del_r) != len(del_v):
+        raise ValueError
+
     del_v = np.array(del_v)
     del_r  = np.array(del_r)
 
@@ -27,15 +45,36 @@ def t_ca(del_r, del_v):
 # Sicherheitsabstand
 def r_ca(del_r, del_v):
     del_v = np.array(del_v)
-    del_r  = np.array(del_r)
+    del_r = np.array(del_r)
+
+    # falls falsche Datentypen als Eingabe verwendet werden
+    if not (type(del_r) in [list, np.ndarray] or type(del_v) in [list, np.ndarray]):
+        raise TypeError
+
+    # falls die Längen sich unterscheiden
+    if len(del_r) != len(del_v):
+        raise ValueError
 
     nenner = np.dot(del_v, del_v)
     if nenner == 0:
-        return 1e9
+        return del_r - 1e9
     return del_r - np.dot(del_r, del_v)/ np.dot(del_v, del_v)
 
 # notwendige Beschleunigung, um auszuweichen
 def acceleration(r_ca, t_ca):
+
+    # falsche Anzahl an Komponenten
+    if len(r_ca) != 2:
+        raise ValueError
+
+    # falls falsche Datentypen als Eingabe verwendet werden
+    if not (type(r_ca) in [list, np.ndarray] and type(t_ca) in [float, int]):
+        raise TypeError
+
+    # falls der Nenner Null ergeben sollte
+    if t_ca == 0:
+        raise ValueError
+
     return 2 * (2.5 - np.array(r_ca)) / t_ca ** 2
 
 #sortiert eine unsortierte Liste aus Tupeln rekursiv anhand des 0ten Elements eines Tupels
@@ -159,15 +198,14 @@ def worker_shambayati(id, secret, q_request, q_reply):
                     a_betrag = v_norm * 6
 
                     # V_MIN nicht unterschreiten
-                    # (entweder nach jeder Beschleunigung oder in kleinen Zeitabschnitten)
-                    if v == V_MIN + 6:
+                    if v == V_MIN + 6.5:
                         q_request.put(('SET_ACCELERATION', a_betrag, secret, id))
                         q_reply.get()
                         q_request.put(('SET_ACCELERATION', np.array([0, 0]), secret, id))
                         q_reply.get()
 
                     # V_MAX nicht überschreiten
-                    if v == V_MAX - 6:
+                    if v == V_MAX - 6.5:
                         q_request.put(('SET_ACCELERATION', -a_betrag, secret, id))
                         q_reply.get()
                         q_request.put(('SET_ACCELERATION', np.array([0, 0]), secret, id))
