@@ -222,8 +222,8 @@ def worker_shambayati(id, secret, q_request, q_reply):
                         q_reply.get()
 
             # nach dem Ausscheiden aus dem Spiel aufhören
-            if puck_self.is_alive() == False:
-                break
+                if puck_self.is_alive() == False:
+                    break
 '''
 # Verhalten nach einer Reflexion
 #die negativen Zeiten betrachten
